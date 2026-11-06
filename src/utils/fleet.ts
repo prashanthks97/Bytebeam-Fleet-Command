@@ -38,7 +38,6 @@ export function buildFleetSummary(
   return Array.from(byVehicle.entries())
     .map(([vehicleId, vehiclePackets]) => {
       const ordered = [...vehiclePackets].sort(newestFirst);
-      const latestPacketTime = Date.parse(ordered[0].event_time);
       const readings: Partial<Record<SignalName, SignalReading>> = {};
 
       for (const signal of SIGNAL_KEYS) {
