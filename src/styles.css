@@ -480,6 +480,31 @@ tbody tr:focus {
   background: #283448;
   border-color: #3a4a60;
 }
+.status-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.acknowledge-button {
+  border: 1px solid #3a5666;
+  border-radius: 6px;
+  background: #152b36;
+  color: #9bdcc8;
+  padding: 6px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.acknowledge-button:hover:not(:disabled) {
+  background: #1c3b43;
+  border-color: #62d6ad;
+}
+.acknowledge-button:disabled {
+  color: #83b7a7;
+  background: #162c2d;
+  border-color: #2a4941;
+  cursor: default;
+}
 .stale-text {
   color: #e6ad65 !important;
 }
@@ -539,6 +564,11 @@ tbody tr:focus {
   align-items: center;
   justify-content: space-between;
   margin: 24px 0;
+}
+.detail-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .detail-heading h2 {
   font-size: 28px;
