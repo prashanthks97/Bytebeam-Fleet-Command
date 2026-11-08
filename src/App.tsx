@@ -3,9 +3,11 @@ import {
   Activity,
   Battery,
   Bell,
+  Bus,
   ChevronRight,
   CircleHelp,
   Clock3,
+  Monitor,
   Search,
   Truck,
   Zap,
@@ -260,7 +262,7 @@ function App() {
             <div className="table-footer">
               <span>Showing {filteredVehicles.length} vehicles</span>
               <span>
-                Click a vehicle to view telemetry <ChevronRight size={13} />
+                Click a vehicle to view telemetry and battery history
               </span>
             </div>
           </section>
@@ -296,6 +298,12 @@ function Sidebar() {
       </div>
       <div className="nav-item muted">
         <Bell size={17} /> Alerts
+      </div>
+       <div className="nav-item muted">
+        <Monitor size={17} /> Monitor
+      </div>
+       <div className="nav-item muted">
+        <Bus size={17} /> Trip
       </div>
       <div className="sidebar-bottom">
         <div className="help-icon">
