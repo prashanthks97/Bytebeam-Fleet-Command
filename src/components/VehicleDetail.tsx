@@ -21,10 +21,17 @@ import StatusBadge from "./StatusBadge";
 export default function VehicleDetail({
   vehicle,
   onBack,
+  alertAcknowledged,
+  onAcknowledge,
 }: {
   vehicle: VehicleSummary;
   onBack: () => void;
+  alertAcknowledged: boolean;
+  onAcknowledge: () => void;
 }) {
+  const hasBatteryAlert =
+    vehicle.status === "Low battery" || vehicle.status === "Critical battery";
+
   return (
     <section className="detail-view">
       <button className="back-button" onClick={onBack}>
@@ -36,7 +43,19 @@ export default function VehicleDetail({
           <h2>{vehicle.vehicleId.toUpperCase()}</h2>
           <p>Latest signal values and battery history</p>
         </div>
-        <StatusBadge status={vehicle.status} />
+        <div className="detail-alert-actions">
+          <StatusBadge status={vehicle.status} />
+          {hasBatteryAlert && (
+            <button
+              className="acknowledge-button"
+              type="button"
+              disabled={alertAcknowledged}
+              onClick={onAcknowledge}
+            >
+              {alertAcknowledged ? "Acknowledged" : "Acknowledge alert"}
+            </button>
+          )}
+        </div>
       </div>
       <div className="signal-grid">
         <SignalCard

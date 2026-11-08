@@ -26,6 +26,16 @@ const FILTERS: (FleetStatus | "All statuses")[] = [
   "No recent data",
 ];
 
+const ACKNOWLEDGED_ALERTS_STORAGE_KEY = "fleet-command-acknowledged-alerts";
+
+function isBatteryAlert(status: FleetStatus) {
+  return status === "Low battery" || status === "Critical battery";
+}
+
+function getBatteryAlertKey(vehicle: VehicleSummary) {
+  return `${vehicle.vehicleId}:${vehicle.status}:${vehicle.soc?.eventTime ?? "unknown"}`;
+}
+
 function App() {
   const vehicles = useMemo(
     () => buildFleetSummary(telemetry as TelemetryPacket[]),
@@ -37,6 +47,32 @@ function App() {
     "All statuses",
   );
   const [selected, setSelected] = useState<VehicleSummary | null>(null);
+  const [acknowledgedAlerts, setAcknowledgedAlerts] = useState<Set<string>>(
+    () => {
+      const savedAlerts = window.localStorage.getItem(
+        ACKNOWLEDGED_ALERTS_STORAGE_KEY,
+      );
+      if (!savedAlerts) return new Set();
+
+      const parsedAlerts: unknown = JSON.parse(savedAlerts);
+      if (
+        !Array.isArray(parsedAlerts) ||
+        !parsedAlerts.every((alert): alert is string => typeof alert === "string")
+      ) {
+        throw new Error("Saved battery alert acknowledgements are invalid.");
+      }
+      return new Set(parsedAlerts);
+    },
+  );
+
+  const acknowledgeAlert = (alertKey: string) => {
+    const updatedAlerts = new Set(acknowledgedAlerts).add(alertKey);
+    window.localStorage.setItem(
+      ACKNOWLEDGED_ALERTS_STORAGE_KEY,
+      JSON.stringify([...updatedAlerts]),
+    );
+    setAcknowledgedAlerts(updatedAlerts);
+  };
 
   const filteredVehicles = vehicles.filter(
     (vehicle) =>
@@ -54,7 +90,16 @@ function App() {
         <Sidebar />
         <main className="main-content">
           <Topbar />
-          <VehicleDetail vehicle={current} onBack={() => setSelected(null)} />
+          <VehicleDetail
+            vehicle={current}
+            onBack={() => setSelected(null)}
+            alertAcknowledged={acknowledgedAlerts.has(
+              getBatteryAlertKey(current),
+            )}
+            onAcknowledge={() =>
+              acknowledgeAlert(getBatteryAlertKey(current))
+            }
+          />
         </main>
       </div>
     );
@@ -172,7 +217,12 @@ function App() {
                       onClick={() => setSelected(vehicle)}
                       tabIndex={0}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") setSelected(vehicle);
+                        if (
+                          e.key === "Enter" &&
+                          e.target === e.currentTarget
+                        ) {
+                          setSelected(vehicle);
+                        }
                       }}
                     >
                       <td>
@@ -240,7 +290,28 @@ function App() {
                         </small>
                       </td>
                       <td>
-                        <StatusBadge status={vehicle.status} />
+                        <div className="status-actions">
+                          <StatusBadge status={vehicle.status} />
+                          {isBatteryAlert(vehicle.status) && (
+                            <button
+                              className="acknowledge-button"
+                              type="button"
+                              disabled={acknowledgedAlerts.has(
+                                getBatteryAlertKey(vehicle),
+                              )}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                acknowledgeAlert(getBatteryAlertKey(vehicle));
+                              }}
+                            >
+                              {acknowledgedAlerts.has(
+                                getBatteryAlertKey(vehicle),
+                              )
+                                ? "Acknowledged"
+                                : "Acknowledge"}
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <ChevronRight size={17} className="row-chevron" />
