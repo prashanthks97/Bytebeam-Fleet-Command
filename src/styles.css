@@ -363,6 +363,28 @@ th {
   font-weight: 700;
   padding: 12px 18px;
 }
+.sort-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.sort-header span {
+  line-height: 1;
+}
+.sort-indicator {
+  color: #dfe9f5;
+}
+.sort-indicator.inactive {
+  color: #6d7d94;
+}
 td {
   padding: 12px 18px;
   border-top: 1px solid #202e43;

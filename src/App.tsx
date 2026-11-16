@@ -1,6 +1,9 @@
 import { useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpNarrowWide,
   Battery,
   Bell,
   Bus,
@@ -26,6 +29,9 @@ const FILTERS: (FleetStatus | "All statuses")[] = [
   "No recent data",
 ];
 
+type SortKey = "vehicle" | "battery" | "speed" | "lastSeen";
+type SortDirection = "asc" | "desc";
+
 const ACKNOWLEDGED_ALERTS_STORAGE_KEY = "fleet-command-acknowledged-alerts";
 
 function isBatteryAlert(status: FleetStatus) {
@@ -47,6 +53,13 @@ function App() {
     "All statuses",
   );
   const [selected, setSelected] = useState<VehicleSummary | null>(null);
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({
+    key: "vehicle",
+    direction: "asc",
+  });
   const [acknowledgedAlerts, setAcknowledgedAlerts] = useState<Set<string>>(
     () => {
       const savedAlerts = window.localStorage.getItem(
@@ -57,7 +70,9 @@ function App() {
       const parsedAlerts: unknown = JSON.parse(savedAlerts);
       if (
         !Array.isArray(parsedAlerts) ||
-        !parsedAlerts.every((alert): alert is string => typeof alert === "string")
+        !parsedAlerts.every(
+          (alert): alert is string => typeof alert === "string",
+        )
       ) {
         throw new Error("Saved battery alert acknowledgements are invalid.");
       }
@@ -82,6 +97,64 @@ function App() {
   const attentionCount =
     stats["Low battery"] + stats["Critical battery"] + stats["No recent data"];
 
+  const handleSort = (key: SortKey) => {
+    setSortConfig((current) => {
+      if (current.key === key) {
+        return {
+          key,
+          direction: current.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return {
+        key,
+        direction: key === "vehicle" ? "asc" : "desc",
+      };
+    });
+  };
+
+  const sortedVehicles = [...filteredVehicles].sort((a, b) => {
+    const directionFactor = sortConfig.direction === "asc" ? 1 : -1;
+
+    const compareVehicle = () =>
+      a.vehicleId.localeCompare(b.vehicleId, undefined, { numeric: true });
+
+    const compareNumeric = (
+      left: number | undefined,
+      right: number | undefined,
+    ) => {
+      if (left === undefined && right === undefined) return 0;
+      if (left === undefined) return 1;
+      if (right === undefined) return -1;
+      return left - right;
+    };
+
+    const compareTimes = (left: string | undefined, right: string | undefined) => {
+      if (left === undefined && right === undefined) return 0;
+      if (left === undefined) return 1;
+      if (right === undefined) return -1;
+      return Date.parse(left) - Date.parse(right);
+    };
+
+    let comparison = 0;
+    switch (sortConfig.key) {
+      case "vehicle":
+        comparison = compareVehicle();
+        break;
+      case "battery":
+        comparison = compareNumeric(a.soc?.value, b.soc?.value);
+        break;
+      case "speed":
+        comparison = compareNumeric(a.speed?.value, b.speed?.value);
+        break;
+      case "lastSeen":
+        comparison = compareTimes(a.lastSeen, b.lastSeen);
+        break;
+    }
+
+    return comparison * directionFactor;
+  });
+
   if (selected) {
     const current =
       vehicles.find((v) => v.vehicleId === selected.vehicleId) ?? selected;
@@ -96,9 +169,7 @@ function App() {
             alertAcknowledged={acknowledgedAlerts.has(
               getBatteryAlertKey(current),
             )}
-            onAcknowledge={() =>
-              acknowledgeAlert(getBatteryAlertKey(current))
-            }
+            onAcknowledge={() => acknowledgeAlert(getBatteryAlertKey(current))}
           />
         </main>
       </div>
@@ -202,25 +273,50 @@ function App() {
               <table>
                 <thead>
                   <tr>
-                    <th>VEHICLE</th>
-                    <th>BATTERY (SOC)</th>
-                    <th>SPEED</th>
-                    <th>LAST SEEN</th>
+                    <th>
+                      <SortHeader
+                        label="VEHICLE"
+                        active={sortConfig.key === "vehicle"}
+                        direction={sortConfig.direction}
+                        onSort={() => handleSort("vehicle")}
+                      />
+                    </th>
+                    <th>
+                      <SortHeader
+                        label="BATTERY (SOC)"
+                        active={sortConfig.key === "battery"}
+                        direction={sortConfig.direction}
+                        onSort={() => handleSort("battery")}
+                      />
+                    </th>
+                    <th>
+                      <SortHeader
+                        label="SPEED"
+                        active={sortConfig.key === "speed"}
+                        direction={sortConfig.direction}
+                        onSort={() => handleSort("speed")}
+                      />
+                    </th>
+                    <th>
+                      <SortHeader
+                        label="LAST SEEN"
+                        active={sortConfig.key === "lastSeen"}
+                        direction={sortConfig.direction}
+                        onSort={() => handleSort("lastSeen")}
+                      />
+                    </th>
                     <th>STATUS</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredVehicles.map((vehicle) => (
+                  {sortedVehicles.map((vehicle) => (
                     <tr
                       key={vehicle.vehicleId}
                       onClick={() => setSelected(vehicle)}
                       tabIndex={0}
                       onKeyDown={(e) => {
-                        if (
-                          e.key === "Enter" &&
-                          e.target === e.currentTarget
-                        ) {
+                        if (e.key === "Enter" && e.target === e.currentTarget) {
                           setSelected(vehicle);
                         }
                       }}
@@ -332,9 +428,7 @@ function App() {
             </div>
             <div className="table-footer">
               <span>Showing {filteredVehicles.length} vehicles</span>
-              <span>
-                Click a vehicle to view telemetry and battery history
-              </span>
+              <span>Click a vehicle to view telemetry and battery history</span>
             </div>
           </section>
           <footer className="page-footer">
@@ -346,6 +440,33 @@ function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  active,
+  direction,
+  onSort,
+}: {
+  label: string;
+  active: boolean;
+  direction: SortDirection;
+  onSort: () => void;
+}) {
+  return (
+    <button type="button" className="sort-header" onClick={onSort}>
+      <span>{label}</span>
+      {active ? (
+        direction === "asc" ? (
+          <ArrowUp size={15} className="sort-indicator" />
+        ) : (
+          <ArrowDown size={15} className="sort-indicator" />
+        )
+      ) : (
+        <ArrowUpNarrowWide size={15} className="sort-indicator inactive" />
+      )}
+    </button>
   );
 }
 
@@ -370,10 +491,10 @@ function Sidebar() {
       <div className="nav-item muted">
         <Bell size={17} /> Alerts
       </div>
-       <div className="nav-item muted">
+      <div className="nav-item muted">
         <Monitor size={17} /> Monitor
       </div>
-       <div className="nav-item muted">
+      <div className="nav-item muted">
         <Bus size={17} /> Trip
       </div>
       <div className="sidebar-bottom">
@@ -426,3 +547,5 @@ function StatCard({
   );
 }
 export default App;
+
+
