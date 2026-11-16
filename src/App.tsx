@@ -120,7 +120,7 @@ function App() {
               </p>
             </div>
             <div className="dataset-pill">
-              <span className="pulse-dot" /> DATASET LOADED{" "}
+              <span className="pulse-dot" /> DATASET LOADED
               <span className="dataset-divider" /> 50 VEHICLES
             </div>
           </div>
@@ -182,8 +182,8 @@ function App() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search truck ID..."
-                  aria-label="Search truck ID"
+                  placeholder="Search Vehicle ID..."
+                  aria-label="Search Vehicle ID"
                 />
               </label>
               <select
@@ -232,7 +232,7 @@ function App() {
                           </span>
                           <span>
                             <strong>{vehicle.vehicleId.toUpperCase()}</strong>
-                            <small>Electric truck</small>
+                            <small>Electric vehicle</small>
                           </span>
                         </div>
                       </td>
